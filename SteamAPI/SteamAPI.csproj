@@ -5,12 +5,16 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <StartupObject>SteamAPI.MainProgram</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.8" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="SteamKit2" Version="3.3.1" />
+    <PackageReference Include="ValveKeyValue" Version="0.20.0.417" />
   </ItemGroup>
 
   <ItemGroup>

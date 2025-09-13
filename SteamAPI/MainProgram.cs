@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Text.Json;
+using Steamworks;
 
 
 
@@ -81,12 +82,12 @@ namespace SteamAPI
 
             //парсинг профиля
             string profileresponse = await GetApiresponse(accurl);
-            using JsonDocument profiledoc = JsonDocument.Parse (profileresponse);
+            using JsonDocument profiledoc = JsonDocument.Parse(profileresponse);
 
             JsonElement profilename = profiledoc.RootElement
                 .GetProperty("response")
                 .GetProperty("players");
-            var firstplayer = profilename[0];     
+            var firstplayer = profilename[0];
             string personalname = firstplayer.GetProperty("personaname").GetString();
 
             string personallinks = firstplayer.GetProperty("profileurl").GetString();
@@ -94,6 +95,10 @@ namespace SteamAPI
             string personalcountry = firstplayer.GetProperty("loccountrycode").GetString();
 
             Console.WriteLine("Name:" + personalname + " | " + personallinks + " | " + personalcountry);
+
+            Console.WriteLine("-----------Ваши зарегистрированные локальные аккаунты--------------------------------------");
+            ValveKeyValue.Run();
+
         }
 
         static async Task<string> GetApiresponse(string url)
