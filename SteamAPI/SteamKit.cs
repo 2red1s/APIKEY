@@ -1,17 +1,11 @@
 ﻿using SteamKit2;
-using SteamKit2.Authentication;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SteamKit2.Internal;
-//using Steamworks;
+
 
 namespace SteamAPI
 {
-    class RedySoft {
-        
+    class RedySoft
+    {
         static SteamClient steamClient;
         static CallbackManager manager;
         static SteamUser steamUser;
@@ -19,22 +13,29 @@ namespace SteamAPI
 
         static string lastLogin;
         static string lastPassword;
-        static string authCode;
+        static string pendingAuthCode = null;
+        static string savedLoginKey = null;
 
+        static bool needEmailCode = false;
+        static bool needTwoFactor = false;
+        static bool isLoggingIn = false;
 
-        static void Main(string[] args) {
+        static void Main(string[] args)
+        {
             steamClient = new SteamClient();
             manager = new CallbackManager(steamClient);
             steamUser = steamClient.GetHandler<SteamUser>();
-            manager.Subscribe<SteamClient.ConnectedCallback>(OnConnected);
-            manager.Subscribe<SteamUser.LoggedOnCallback>(OnLoggedOn);
             steamFriends = steamClient.GetHandler<SteamFriends>();
 
-            steamClient.Connect();
-            
-            Console.WriteLine("Connecting to Steam...");
+            manager.Subscribe<SteamClient.ConnectedCallback>(OnConnected);
+            manager.Subscribe<SteamClient.DisconnectedCallback>(OnDisconnected);
+            manager.Subscribe<SteamUser.LoggedOnCallback>(OnLoggedOn);
 
-            while(true)
+
+            Console.WriteLine("Connecting to Steam...");
+            steamClient.Connect();
+
+            while (true)
             {
                 manager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
             }
@@ -42,99 +43,107 @@ namespace SteamAPI
 
         static void OnConnected(SteamClient.ConnectedCallback callback)
         {
-            Console.WriteLine("Enter your Steam username:");
-            lastLogin = Console.ReadLine();
-            Console.WriteLine("Enter your Steam password:");
-            lastPassword = Console.ReadLine();
-            
-
-
             Console.WriteLine("Connected to Steam!");
 
+            if (!isLoggingIn)
+            {
+                Console.WriteLine("Enter your Steam username:");
+                lastLogin = Console.ReadLine();
+                Console.WriteLine("Enter your Steam password:");
+                lastPassword = Console.ReadLine();
+            }
 
+            PerformLogin();
+        }
 
-            steamUser.LogOn(new SteamUser.LogOnDetails
+        static void PerformLogin()
+        {
+            isLoggingIn = true;
+
+            var logOnDetails = new SteamUser.LogOnDetails
             {
                 Username = lastLogin,
                 Password = lastPassword
-            });
+            };
 
+            if (needEmailCode && !string.IsNullOrEmpty(pendingAuthCode))
+            {
+                logOnDetails.AuthCode = pendingAuthCode;
+            }
+            else if (needTwoFactor && !string.IsNullOrEmpty(pendingAuthCode))
+            {
+                logOnDetails.TwoFactorCode = pendingAuthCode;
+            }
+
+            steamUser.LogOn(logOnDetails);
         }
 
-
-
-        static void OnLoggedOn(SteamUser.LoggedOnCallback loggedOnCallback) {
-            var playingGame = new ClientMsgProtobuf<CMsgClientGamesPlayed>(EMsg.ClientGamesPlayed);
-            
-            if (loggedOnCallback.Result == EResult.AccountLogonDenied)
+        static void OnLoggedOn(SteamUser.LoggedOnCallback callback)
+        {
+            if (callback.Result == EResult.AccountLogonDenied)
             {
-                Console.WriteLine("Please write code from Mail");
-                authCode = Console.ReadLine();
-
-                steamUser.LogOn(new SteamUser.LogOnDetails
-                {   
-                    Username = lastLogin,
-                    Password = lastPassword,
-                    AuthCode = authCode
-                });
+                Console.WriteLine("Write code from Email:");
+                pendingAuthCode = Console.ReadLine();
+                needEmailCode = true;
+                needTwoFactor = false;
+                steamClient.Disconnect();
+                return;
 
             }
-            else if (loggedOnCallback.Result == EResult.AccountLoginDeniedNeedTwoFactor)
-            {
-                Console.WriteLine("Please write code from Steam Guard Mobile Authenticator");
-                authCode = Console.ReadLine();
 
-                steamUser.LogOn(new SteamUser.LogOnDetails
-                {
-                    Username = lastLogin,
-                    Password = lastPassword,
-                    TwoFactorCode = authCode
-                });
+            if (callback.Result == EResult.AccountLoginDeniedNeedTwoFactor)
+            {
+                Console.WriteLine("Write code from Mobile Guard:");
+                pendingAuthCode = Console.ReadLine();
+                needTwoFactor = true;
+                needEmailCode = false;
+                steamClient.Disconnect();
+                return;
             }
-            else if (loggedOnCallback.Result == EResult.OK)
-            {
-                Console.WriteLine("Success Logged to Account");
-                StartGame(730, "CS:GO");
 
-                Console.WriteLine("Press Enter to stop playing the game...");
+            if (callback.Result == EResult.OK)
+            {
+                Console.WriteLine("Logged in successfully: " + callback.Result);
+                StartGame(515570, "game"); // idgame
+                Console.WriteLine("Write to stop playing...");
                 Console.ReadLine();
                 StopGame();
+                return;
             }
-            else
-            {
-                Console.WriteLine("LoggedOn Result: " + loggedOnCallback.Result);
-            }
-            
 
+            Console.WriteLine($"Login failed: {callback.Result}");
+            isLoggingIn = false;
+        }
+
+        static void OnDisconnected(SteamClient.DisconnectedCallback callback)
+        {
+            Console.WriteLine("Disconnected from Steam");
+
+            if (needEmailCode || needTwoFactor)
+            {
+                Thread.Sleep(2000);
+                steamClient.Connect();
+            }
         }
 
         static void StartGame(int appId, string gameName = null)
         {
             var playingGame = new ClientMsgProtobuf<CMsgClientGamesPlayed>(EMsg.ClientGamesPlayed);
-
             playingGame.Body.games_played.Add(new CMsgClientGamesPlayed.GamePlayed
             {
-                game_id = 730, // Replace with the desired game's AppID
+                game_id = (ulong)appId,
                 game_extra_info = gameName ?? $"Playing Game {appId}"
             });
-
             steamClient.Send(playingGame);
-
             Console.WriteLine($"Started playing game with AppID: {appId}");
         }
 
         static void StopGame()
         {
             var playingGame = new ClientMsgProtobuf<CMsgClientGamesPlayed>(EMsg.ClientGamesPlayed);
-            // Sending an empty list indicates that the user has stopped playing any game
             steamClient.Send(playingGame);
             Console.WriteLine("Stopped playing game.");
+
         }
-
-
-
     }
-
-
 }
-

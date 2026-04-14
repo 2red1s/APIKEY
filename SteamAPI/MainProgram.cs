@@ -18,7 +18,7 @@ namespace SteamAPI
 
             //GetNewsForApp (v0002)
 
-            string newsforapp = $"{Headers.BaseURL}ISteamNews/GetNewsForApp/v0002/?appid=730&count=3&maxlength=300&format=json\r\nArguments";
+            string newsforapp = $"{Headers.BaseURL}ISteamNews/GetNewsForApp/v0002/?appid=548430&count=3&maxlength=300&format=json\r\nArguments";
             Console.WriteLine(await GetApiresponse(newsforapp));
 
             Console.WriteLine("-------------------------------------------------");
@@ -28,16 +28,19 @@ namespace SteamAPI
             Console.WriteLine(await GetApiresponse(accurl));
 
             Console.WriteLine("-------------------------------------------------");
-
+            
+            // Пока не работает(Бета-версия)
             //получить список друзей
-            string friendurl = $"{Headers.BaseURL}ISteamUser/GetFriendList/v0001/?key={Headers.APIKey}&steamid={Headers.SteamID}&relationship=friend";
-            Console.WriteLine(await GetApiresponse(friendurl));
+            //string friendurl = $"{Headers.BaseURL}ISteamUser/GetFriendList/v0001/?key={Headers.APIKey}&steamid={Headers.SteamID}&relationship=friend";
+            //Console.WriteLine(await GetApiresponse(friendurl));
+            //string friendurl = $"{Headers.BaseURL}ISteamUser/GetFriendList/v0001/?key={Headers.APIKey}&steamid={Headers.SteamID}&relationship=friend";
+            //Console.WriteLine(await GetApiresponse(friendurl));
 
             //GetPlayerAchievements (v0001) получить список ачивок об игре
             Console.WriteLine("---------------PlayerAchiev001----------------------------------");
 
             //GetPlayerAchievements (v0001)
-            string playerachiev = $"{Headers.BaseURL}ISteamUserStats/GetPlayerAchievements/v0001/?appid=548430&key={Headers.APIKey}&steamid={Headers.SteamID}";
+            string playerachiev = $"{Headers.BaseURL}ISteamUserStats/GetPlayerAchievements/v0001/?appid=548430&key={Headers.APIKey}&steamid={Headers.SteamID}&l=russian";
             Console.WriteLine(await GetApiresponse(playerachiev));
 
             //GetUserStatsForGame (v0002)
@@ -76,7 +79,7 @@ namespace SteamAPI
                 .GetProperty("response")
                 .GetProperty("games");
             int playtime = games[3].GetProperty("playtime_forever").GetInt32();
-            string firstgames = games[3].GetProperty("name").GetString();
+            string firstgames = games[5].GetProperty("name").GetString();
             Console.WriteLine("Первая игра:" + firstgames + " | часов в игре " + (playtime / 60));
 
 
